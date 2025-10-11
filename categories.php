@@ -1,5 +1,5 @@
 <?php
-require_once "config/db.php";
+require "config/db.php";
 
 // Lấy danh mục
 $sql_categories = "SELECT * FROM categories ORDER BY name ASC";

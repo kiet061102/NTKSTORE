@@ -1,7 +1,7 @@
 <?php
 include 'includes/header.php';
 include 'includes/navbar.php';
-require_once "config/db.php";
+require "config/db.php";
 
 // Lấy id danh mục từ URL
 $category_id = isset($_GET['id']) ? $conn->real_escape_string($_GET['id']) : '';
