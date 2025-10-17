@@ -31,13 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Lọc theo danh mục
-$selected_category = isset($_GET['category_id']) ? $_GET['category_id'] : "";
+$selected_category = $_GET['category_id'] ?? "";
+$selected_month = $_GET['month'] ?? "";
+$selected_year = $_GET['year'] ?? "";
 
 // Lấy danh sách danh mục
 $sql_categories = "SELECT id, name FROM categories ORDER BY name ASC";
 $categories = $conn->query($sql_categories);
 
-// Lấy danh sách sản phẩm (lọc theo danh mục nếu có)
+// Lấy danh sách sản phẩm
 if (!empty($selected_category)) {
     $sql_products = "SELECT id, name FROM products WHERE category_id = '$selected_category' ORDER BY name ASC";
 } else {
@@ -45,10 +47,24 @@ if (!empty($selected_category)) {
 }
 $products = $conn->query($sql_products);
 
-// Lấy lịch sử nhập hàng
-$sql_imports = "SELECT * FROM imports ORDER BY import_date DESC";
+// Lọc lịch sử nhập hàng theo tháng & năm
+$where = [];
+if (!empty($selected_month)) {
+    $where[] = "MONTH(import_date) = '$selected_month'";
+}
+if (!empty($selected_year)) {
+    $where[] = "YEAR(import_date) = '$selected_year'";
+}
+
+$where_sql = "";
+if (count($where) > 0) {
+    $where_sql = "WHERE " . implode(" AND ", $where);
+}
+
+$sql_imports = "SELECT * FROM imports $where_sql ORDER BY import_date DESC";
 $imports = $conn->query($sql_imports);
 ?>
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -68,6 +84,7 @@ $imports = $conn->query($sql_imports);
                     <i class="fa-solid fa-xmark"></i>
                 </a>
             </div>
+
             <div class="card-body">
                 <!-- Thông báo -->
                 <?php if (isset($_SESSION['success'])): ?>
@@ -82,12 +99,11 @@ $imports = $conn->query($sql_imports);
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">Nhập hàng mới</div>
                     <div class="card-body">
-                        <!-- Bộ lọc loại sản phẩm -->
+                        <!-- Lọc loại sản phẩm -->
                         <form method="GET" class="row mb-3">
                             <div class="col-md-6">
-                                <label for="category_id" class="form-label">Lọc theo loại sản phẩm</label>
-                                <select name="category_id" id="category_id" class="form-select"
-                                    onchange="this.form.submit()">
+                                <label class="form-label">Lọc theo loại sản phẩm</label>
+                                <select name="category_id" class="form-select" onchange="this.form.submit()">
                                     <option value="">-- Tất cả loại sản phẩm --</option>
                                     <?php while ($cat = $categories->fetch_assoc()): ?>
                                         <option value="<?= $cat['id'] ?>" <?= ($selected_category == $cat['id']) ? 'selected' : '' ?>>
@@ -97,11 +113,12 @@ $imports = $conn->query($sql_imports);
                                 </select>
                             </div>
                         </form>
+
                         <form method="POST">
                             <div class="row">
                                 <div class="col-md-3 mb-3">
-                                    <label for="product_id" class="form-label">Sản phẩm</label>
-                                    <select name="product_id" id="product_id" class="form-select" required>
+                                    <label class="form-label">Sản phẩm</label>
+                                    <select name="product_id" class="form-select" required>
                                         <option value="">-- Chọn sản phẩm --</option>
                                         <?php while ($p = $products->fetch_assoc()): ?>
                                             <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
@@ -110,21 +127,18 @@ $imports = $conn->query($sql_imports);
                                 </div>
 
                                 <div class="col-md-2 mb-3">
-                                    <label for="quantity" class="form-label">Số lượng</label>
-                                    <input type="number" name="quantity" id="quantity" class="form-control" min="1"
-                                        required>
+                                    <label class="form-label">Số lượng</label>
+                                    <input type="number" name="quantity" class="form-control" min="1" required>
                                 </div>
 
                                 <div class="col-md-3 mb-3">
-                                    <label for="import_price" class="form-label">Giá nhập (VNĐ)</label>
-                                    <input type="number" name="import_price" id="import_price" class="form-control"
-                                        min="0" required>
+                                    <label class="form-label">Giá nhập (VNĐ)</label>
+                                    <input type="number" name="import_price" class="form-control" min="0" required>
                                 </div>
 
                                 <div class="col-md-3 mb-3">
-                                    <label for="sell_price" class="form-label">Giá bán (VNĐ)</label>
-                                    <input type="number" name="sell_price" id="sell_price" class="form-control" min="0"
-                                        required>
+                                    <label class="form-label">Giá bán (VNĐ)</label>
+                                    <input type="number" name="sell_price" class="form-control" min="0" required>
                                 </div>
 
                                 <div class="col-md-1 mb-3 d-grid">
@@ -138,7 +152,33 @@ $imports = $conn->query($sql_imports);
 
                 <!-- Lịch sử nhập hàng -->
                 <div class="card">
-                    <div class="card-header bg-dark text-white">Lịch sử nhập hàng</div>
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>Lịch sử nhập hàng</span>
+                        <form method="GET" class="d-flex gap-2">
+                            <select name="month" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Tháng --</option>
+                                <?php for ($m = 1; $m <= 12; $m++): ?>
+                                    <option value="<?= $m ?>" <?= ($selected_month == $m) ? 'selected' : '' ?>>
+                                        Tháng <?= $m ?>
+                                    </option>
+                                <?php endfor; ?>
+                            </select>
+
+                            <select name="year" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Năm --</option>
+                                <?php
+                                $currentYear = date("Y");
+                                if (empty($selected_year)) {
+                                    $selected_year = $currentYear;
+                                }
+                                for ($y = $currentYear; $y >= $currentYear - 5; $y--): ?>
+                                    <option value="<?= $y ?>" <?= ($selected_year == $y) ? 'selected' : '' ?>><?= $y ?>
+                                    </option>
+                                <?php endfor; ?>
+                            </select>
+                        </form>
+                    </div>
+
                     <div class="card-body">
                         <table class="table table-bordered table-hover text-center align-middle">
                             <thead class="table-secondary">
@@ -165,13 +205,14 @@ $imports = $conn->query($sql_imports);
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-muted">Chưa có lịch sử nhập hàng</td>
+                                        <td colspan="6" class="text-muted">Không có dữ liệu trong khoảng thời gian này</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>

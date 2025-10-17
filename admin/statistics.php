@@ -2,38 +2,42 @@
 session_start();
 require "../config/db.php";
 
-// Lấy năm từ request hoặc mặc định năm hiện tại
+// ========================
+// CẤU HÌNH NĂM THỐNG KÊ
+// ========================
 $year = isset($_GET['year']) ? intval($_GET['year']) : date("Y");
 
-// Tổng sản phẩm bán theo tháng
-$sql = "
-    SELECT MONTH(o.created_at) as month, SUM(od.quantity) as total_sold
+// ========================
+// 1️⃣ LẤY SỐ LƯỢNG BÁN THEO THÁNG
+// ========================
+$sql_sold = "
+    SELECT MONTH(o.created_at) AS month, SUM(od.quantity) AS total_sold
     FROM order_details od
     INNER JOIN orders o ON od.order_id = o.id
     WHERE YEAR(o.created_at) = $year AND o.status = 'Completed'
     GROUP BY MONTH(o.created_at)
-    ORDER BY MONTH(o.created_at)
 ";
-$result = $conn->query($sql);
-if (!$result)
-    die("SQL Error: " . $conn->error);
+$result = $conn->query($sql_sold);
 
-$monthlyData = array_fill(1, 12, 0);
+$monthlySold = array_fill(1, 12, 0);
 while ($row = $result->fetch_assoc()) {
-    $monthlyData[intval($row['month'])] = intval($row['total_sold']);
+    $monthlySold[intval($row['month'])] = intval($row['total_sold']);
 }
 
-// Tổng doanh thu
+// ========================
+// 2️⃣ TỔNG DOANH THU CẢ NĂM
+// ========================
 $sql_total = "
     SELECT SUM(od.quantity * od.price) AS total
     FROM order_details od
     INNER JOIN orders o ON od.order_id = o.id
     WHERE YEAR(o.created_at) = $year AND o.status = 'Completed'
 ";
-$res_total = $conn->query($sql_total);
-$total = ($res_total && $row = $res_total->fetch_assoc()) ? ($row['total'] ?? 0) : 0;
+$total = $conn->query($sql_total)->fetch_assoc()['total'] ?? 0;
 
-// Lợi nhuận theo tháng & tổng năm (dựa theo imports)
+// ========================
+// 3️⃣ LỢI NHUẬN THEO THÁNG & TỔNG NĂM
+// ========================
 $sql_profit = "
     SELECT 
         MONTH(o.created_at) AS month,
@@ -44,59 +48,50 @@ $sql_profit = "
     LEFT JOIN (
         SELECT product_id, import_price
         FROM imports
-        WHERE id IN (
-            SELECT MAX(id) FROM imports GROUP BY product_id
-        )
+        WHERE id IN (SELECT MAX(id) FROM imports GROUP BY product_id)
     ) i ON i.product_id = p.id
-    WHERE YEAR(o.created_at) = $year 
-      AND o.status = 'Completed'
+    WHERE YEAR(o.created_at) = $year AND o.status = 'Completed'
     GROUP BY MONTH(o.created_at)
-    ORDER BY MONTH(o.created_at)
 ";
 $res_profit = $conn->query($sql_profit);
 
 $monthlyProfit = array_fill(1, 12, 0);
 $totalProfit = 0;
-if ($res_profit) {
-    while ($row = $res_profit->fetch_assoc()) {
-        $m = intval($row['month']);
-        $monthlyProfit[$m] = floatval($row['profit']);
-        $totalProfit += floatval($row['profit']);
-    }
+while ($row = $res_profit->fetch_assoc()) {
+    $m = intval($row['month']);
+    $monthlyProfit[$m] = floatval($row['profit']);
+    $totalProfit += floatval($row['profit']);
 }
 
-// Chi tiết sản phẩm theo tháng (gồm lợi nhuận từ imports)
+// ========================
+// 4️⃣ CHI TIẾT SẢN PHẨM THEO THÁNG
+// ========================
 $detailsByMonth = [];
-for ($m = 1; $m <= 12; $m++) {
-    if ($monthlyData[$m] > 0) {
-        $sql_details = "
-            SELECT p.name AS product_name, c.name AS category_name, b.name AS brand_name, 
-                   SUM(od.quantity) AS total_sold,
-                   SUM((od.price - i.import_price) * od.quantity) AS profit
-            FROM order_details od
-            INNER JOIN orders o ON od.order_id = o.id
-            INNER JOIN products p ON od.product_id = p.id
-            INNER JOIN categories c ON p.category_id = c.id
-            INNER JOIN brands b ON p.brand_id = b.id
-            LEFT JOIN (
-                SELECT product_id, import_price
-                FROM imports
-                WHERE id IN (
-                    SELECT MAX(id) FROM imports GROUP BY product_id
-                )
-            ) i ON i.product_id = p.id
-            WHERE YEAR(o.created_at) = $year 
-              AND MONTH(o.created_at) = $m
-              AND o.status = 'Completed'
-            GROUP BY p.id, p.name, c.name, b.name
-            ORDER BY total_sold DESC
-        ";
-        $res_details = $conn->query($sql_details);
-        if ($res_details) {
-            while ($r = $res_details->fetch_assoc()) {
-                $detailsByMonth[$m][] = $r;
-            }
-        }
+foreach (range(1, 12) as $m) {
+    if ($monthlySold[$m] == 0)
+        continue;
+
+    $sql_details = "
+        SELECT p.name AS product_name, c.name AS category_name, b.name AS brand_name, 
+               SUM(od.quantity) AS total_sold,
+               SUM((od.price - i.import_price) * od.quantity) AS profit
+        FROM order_details od
+        INNER JOIN orders o ON od.order_id = o.id
+        INNER JOIN products p ON od.product_id = p.id
+        INNER JOIN categories c ON p.category_id = c.id
+        INNER JOIN brands b ON p.brand_id = b.id
+        LEFT JOIN (
+            SELECT product_id, import_price
+            FROM imports
+            WHERE id IN (SELECT MAX(id) FROM imports GROUP BY product_id)
+        ) i ON i.product_id = p.id
+        WHERE YEAR(o.created_at) = $year AND MONTH(o.created_at) = $m AND o.status = 'Completed'
+        GROUP BY p.id
+        ORDER BY total_sold DESC
+    ";
+    $res_details = $conn->query($sql_details);
+    if ($res_details) {
+        $detailsByMonth[$m] = $res_details->fetch_all(MYSQLI_ASSOC);
     }
 }
 ?>
@@ -106,20 +101,19 @@ for ($m = 1; $m <= 12; $m++) {
 <head>
     <meta charset="UTF-8">
     <title>Thống kê bán hàng - Admin</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="bg-light">
-    <?php include "../admin/index.php" ?>
+    <?php include "../admin/index.php"; ?>
+
     <div class="container py-4">
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
-                <a href="../admin/index.php" class="btn btn-danger btn-sm">
-                    <i class="fa-solid fa-xmark"></i>
-                </a>
+                <a href="../admin/index.php" class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i></a>
                 <span>Thống kê bán hàng năm <?= $year ?></span>
-                <form method="GET" class="d-flex" style="gap:10px;">
+                <form method="GET" class="d-flex gap-2">
                     <select name="year" class="form-select">
                         <?php for ($y = date("Y"); $y >= date("Y") - 5; $y--): ?>
                             <option value="<?= $y ?>" <?= $y == $year ? 'selected' : '' ?>><?= $y ?></option>
@@ -131,11 +125,10 @@ for ($m = 1; $m <= 12; $m++) {
 
             <div class="card-body">
                 <div class="row">
-                    <!-- Biểu đồ số lượng -->
+                    <!-- Biểu đồ bán ra -->
                     <div class="col-md-6 mb-3">
                         <canvas id="salesChart" height="300"></canvas>
                     </div>
-
                     <!-- Biểu đồ lợi nhuận -->
                     <div class="col-md-6 mb-3">
                         <canvas id="profitChart" height="300"></canvas>
@@ -143,7 +136,7 @@ for ($m = 1; $m <= 12; $m++) {
 
                     <!-- Bảng dữ liệu -->
                     <div class="col-12 mt-4">
-                        <div class="card shadow-sm border-1">
+                        <div class="card border-1">
                             <div class="card-header bg-dark text-white fw-bold">
                                 Bảng số lượng & lợi nhuận theo tháng
                             </div>
@@ -158,26 +151,24 @@ for ($m = 1; $m <= 12; $m++) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                                        <?php foreach (range(1, 12) as $m): ?>
                                             <tr>
                                                 <td><strong><?= $m ?>/<?= $year ?></strong></td>
-                                                <td><?= $monthlyData[$m] ?></td>
+                                                <td><?= $monthlySold[$m] ?></td>
                                                 <td class="<?= $monthlyProfit[$m] >= 0 ? 'text-success' : 'text-danger' ?>">
                                                     <?= number_format($monthlyProfit[$m], 0, ',', '.') ?> ₫
                                                 </td>
                                                 <td>
                                                     <?php if (!empty($detailsByMonth[$m])): ?>
-                                                        <button class="btn btn-sm btn-info fw-bold" type="button"
-                                                            data-bs-toggle="collapse" data-bs-target="#collapseMonth<?= $m ?>">
-                                                            Xem
-                                                        </button>
-                                                    <?php else: ?>
-                                                        -
+                                                        <button class="btn btn-sm btn-info fw-bold toggle-btn"
+                                                            data-target="#month<?= $m ?>">Xem</button>
+                                                    <?php else: ?> -
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
+
                                             <?php if (!empty($detailsByMonth[$m])): ?>
-                                                <tr class="collapse" id="collapseMonth<?= $m ?>">
+                                                <tr class="collapse" id="month<?= $m ?>">
                                                     <td colspan="4">
                                                         <div class="card card-body">
                                                             <table class="table table-sm table-bordered text-center">
@@ -209,7 +200,8 @@ for ($m = 1; $m <= 12; $m++) {
                                                     </td>
                                                 </tr>
                                             <?php endif; ?>
-                                        <?php endfor; ?>
+                                        <?php endforeach; ?>
+
                                         <tr class="table-success fw-bold">
                                             <td colspan="2">Tổng doanh thu</td>
                                             <td colspan="2"><?= number_format($total, 0, ',', '.') ?> ₫</td>
@@ -226,24 +218,21 @@ for ($m = 1; $m <= 12; $m++) {
                 </div>
             </div>
         </div>
+
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- ChartJS -->
     <script>
         const salesCtx = document.getElementById('salesChart').getContext('2d');
         new Chart(salesCtx, {
             type: 'pie',
             data: {
-                labels: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
+                labels: Array.from({ length: 12 }, (_, i) => `Th${i + 1}`),
                 datasets: [{
                     label: 'Sản phẩm bán ra',
-                    data: <?= json_encode(array_values($monthlyData)) ?>,
-                    backgroundColor: [
-                        'rgba(255,99,132,0.7)', 'rgba(54,162,235,0.7)', 'rgba(255,206,86,0.7)',
-                        'rgba(75,192,192,0.7)', 'rgba(153,102,255,0.7)', 'rgba(255,159,64,0.7)',
-                        'rgba(199,199,199,0.7)', 'rgba(255,99,71,0.7)', 'rgba(60,179,113,0.7)',
-                        'rgba(123,104,238,0.7)', 'rgba(255,215,0,0.7)', 'rgba(106,90,205,0.7)'
-                    ],
-                    borderColor: '#fff', borderWidth: 2
+                    data: <?= json_encode(array_values($monthlySold)) ?>,
+                    backgroundColor: Array.from({ length: 12 }, () =>
+                        `hsl(${Math.random() * 360}, 70%, 70%)`)
                 }]
             },
             options: { responsive: true }
@@ -253,36 +242,34 @@ for ($m = 1; $m <= 12; $m++) {
         new Chart(profitCtx, {
             type: 'bar',
             data: {
-                labels: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
+                labels: Array.from({ length: 12 }, (_, i) => `Th${i + 1}`),
                 datasets: [{
                     label: 'Lợi nhuận (₫)',
                     data: <?= json_encode(array_values($monthlyProfit)) ?>,
                     backgroundColor: 'rgba(40,167,69,0.6)',
-                    borderColor: 'rgba(40,167,69,1)',
-                    borderWidth: 1
+                    borderColor: 'rgba(40,167,69,1)'
                 }]
             },
             options: {
                 scales: {
-                    y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString() + ' ₫' } }
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => v.toLocaleString() + ' ₫' }
+                    }
                 }
             }
         });
     </script>
+
+    <!-- Toggle xem/ẩn -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const buttons = document.querySelectorAll('[data-bs-toggle="collapse"]');
-
-            buttons.forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const target = document.querySelector(btn.getAttribute('data-bs-target'));
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".toggle-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const target = document.querySelector(btn.dataset.target);
                     const collapse = bootstrap.Collapse.getOrCreateInstance(target);
-
-                    if (target.classList.contains('show')) {
-                        collapse.hide();
-                    } else {
-                        collapse.show();
-                    }
+                    target.classList.contains("show") ? collapse.hide() : collapse.show();
                 });
             });
         });

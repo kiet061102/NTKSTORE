@@ -16,7 +16,6 @@ $products = "
 ";
 $result_products = $conn->query($products);
 
-
 // XÓA SẢN PHẨM
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
@@ -29,8 +28,6 @@ if (isset($_GET['delete'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id = $_POST["id"] ?? "";
     $name = $_POST["name"];
-    $price = $_POST["price"];
-    $stock = $_POST["stock"];
     $description = $_POST["description"];
     $brand_id = $_POST["brand_id"];
     $category_id = $_POST["category_id"];
@@ -73,13 +70,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($id)) {
         // Cập nhật
         $query = "UPDATE products 
-          SET name='$name', description='$description', price='$price', stock='$stock',
+          SET name='$name', description='$description',
               image='$img', brand_id='$brand_id', category_id='$category_id'
           WHERE id=$id";
     } else {
         // Thêm mới
-        $query = "INSERT INTO products (name, description, price, stock, image, brand_id, category_id) 
-          VALUES ('$name', '$description', '$price', '$stock', '$img', '$brand_id', '$category_id')";
+        $query = "INSERT INTO products (name, description, image, brand_id, category_id) 
+          VALUES ('$name', '$description', '$img', '$brand_id', '$category_id')";
     }
 
     $conn->query($query);
@@ -87,13 +84,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit();
 }
 
-
-
 // Nếu bấm sửa -> lấy dữ liệu sản phẩm
 $editData = null;
 if (isset($_GET['edit'])) {
     $id = intval($_GET['edit']);
     $editData = $conn->query("SELECT * FROM products WHERE id=$id")->fetch_assoc();
+    $editImages = !empty($editData['image']) ? explode(',', $editData['image']) : [];
 }
 ?>
 
@@ -127,18 +123,11 @@ if (isset($_GET['edit'])) {
                                 value="<?= $editData['name'] ?? '' ?>" required>
                         </div>
                         <div class="col-md-2">
-                            <input type="number" name="price" class="form-control" placeholder="Giá"
-                                value="<?= $editData['price'] ?? '' ?>" required>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" name="stock" class="form-control" placeholder="Số lượng"
-                                value="<?= $editData['stock'] ?? '' ?>" required>
-                        </div>
-
-                        <div class="col-md-2">
                             <select name="brand_id" class="form-select" required>
                                 <option value="">-- Chọn hãng --</option>
-                                <?php while ($b = $brands->fetch_assoc()): ?>
+                                <?php
+                                $brands->data_seek(0);
+                                while ($b = $brands->fetch_assoc()): ?>
                                     <option value="<?= $b['id'] ?>" <?= (isset($editData['brand_id']) && $editData['brand_id'] == $b['id']) ? "selected" : "" ?>>
                                         <?= htmlspecialchars($b['name']) ?>
                                     </option>
@@ -148,17 +137,36 @@ if (isset($_GET['edit'])) {
                         <div class="col-md-2">
                             <select name="category_id" class="form-select" required>
                                 <option value="">-- Chọn loại --</option>
-                                <?php while ($c = $categories->fetch_assoc()): ?>
+                                <?php
+                                $categories->data_seek(0);
+                                while ($c = $categories->fetch_assoc()): ?>
                                     <option value="<?= $c['id'] ?>" <?= (isset($editData['category_id']) && $editData['category_id'] == $c['id']) ? "selected" : "" ?>>
                                         <?= htmlspecialchars($c['name']) ?>
                                     </option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
+
                         <div class="col-md-3">
                             <input type="file" class="form-control" name="img[]" multiple accept="image/*"
                                 onchange="limitFiles(this)">
                         </div>
+
+                        <!-- Hiển thị 3 ảnh hiện tại nếu đang sửa -->
+                        <?php if (!empty($editImages)): ?>
+                            <div class="col-12">
+                                <label class="fw-bold text-secondary">Ảnh hiện tại:</label>
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <?php foreach ($editImages as $img): ?>
+                                        <div class="border rounded p-2 text-center bg-white shadow-sm">
+                                            <img src="../public/uploads/<?= htmlspecialchars($img) ?>" width="100"
+                                                class="rounded mb-1">
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <div class="col-md-12">
                             <textarea name="description" class="form-control" rows="2"
                                 placeholder="Mô tả sản phẩm"><?= $editData['description'] ?? '' ?></textarea>
@@ -206,8 +214,7 @@ if (isset($_GET['edit'])) {
                                 <td><?= htmlspecialchars($row['category_name']) ?></td>
                                 <td><?= htmlspecialchars($row['stock']) ?></td>
                                 <td><?= number_format($row['price'], 0, ',', '.') ?>₫</td>
-                                <td
-                                    style="max-width: 300px ;word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">
+                                <td style="max-width: 300px; word-wrap: break-word;">
                                     <?= mb_strimwidth($row['description'], 0, 70, '...'); ?>
                                 </td>
                                 <td>
@@ -228,6 +235,14 @@ if (isset($_GET['edit'])) {
         </div>
     </div>
 
+    <script>
+        function limitFiles(input) {
+            if (input.files.length > 3) {
+                alert("Chỉ được chọn tối đa 3 ảnh!");
+                input.value = "";
+            }
+        }
+    </script>
 </body>
 
 </html>
