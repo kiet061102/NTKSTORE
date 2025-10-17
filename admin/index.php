@@ -43,6 +43,11 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                     </div>
                     <div class="col-md-3">
+                        <a href="imports.php" class="btn btn-danger w-100 fw-bold">
+                            <i class="fa-solid fa-truck"></i></i> Nhập hàng
+                        </a>
+                    </div>
+                    <div class="col-md-3">
                         <a href="brands.php" class="btn btn-secondary w-100 fw-bold">
                             <i class="fa-brands fa-apple"></i> Quản lý hãng
                         </a>
