@@ -13,7 +13,7 @@ $user_id = intval($_SESSION['user_id']);
 // Lấy thông tin user
 $sql_user = "SELECT fullname FROM users WHERE id = $user_id LIMIT 1";
 $result_user = $conn->query($sql_user);
-$user = $result_user->fetch_assoc();
+$users = $result_user->fetch_assoc();
 
 // Nếu submit form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -30,8 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['error'] = "Mật khẩu hiện tại không đúng!";
     } elseif ($new_password !== $confirm_password) {
         $_SESSION['error'] = "Mật khẩu mới và xác nhận mật khẩu không khớp!";
-    } elseif (strlen($new_password) < 6) {
-        $_SESSION['error'] = "Mật khẩu mới phải có ít nhất 6 ký tự!";
     } else {
         $hashed = password_hash($new_password, PASSWORD_BCRYPT);
         $update = "UPDATE users SET password = '$hashed' WHERE id = $user_id";
@@ -60,7 +58,7 @@ include "includes/navbar.php";
                         style="width:120px; height:120px;">
                         <i class="fa-solid fa-user" style="font-size:60px; color:#6c757d;"></i>
                     </div>
-                    <h5 class="mt-2"><?= htmlspecialchars($user['fullname']) ?></h5>
+                    <h5 class="mt-2"><?= htmlspecialchars($users['fullname']) ?></h5>
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="profile.php" class="list-group-item list-group-item-action">

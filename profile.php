@@ -65,17 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($action)) {
     $username = $conn->real_escape_string(trim($_POST['username']));
     $fullname = $conn->real_escape_string(trim($_POST['fullname']));
     $email = $conn->real_escape_string(trim($_POST['email']));
-    $phone = $conn->real_escape_string(trim($_POST['phone'] ?? ''));
-    $address = $conn->real_escape_string(trim($_POST['address'] ?? ''));
 
     if (empty($username) || empty($email)) {
         $_SESSION['error'] = "Tên đăng nhập và Email không được để trống!";
     } else {
         $sql = "UPDATE users 
-                SET username='$username', fullname='$fullname', email='$email', phone='$phone', address='$address'
+                SET username='$username', fullname='$fullname', email='$email'
                 WHERE id=$user_id";
         if ($conn->query($sql)) {
             $_SESSION['success'] = "Cập nhật thông tin thành công!";
+            $_SESSION['fullname'] = $fullname;
         } else {
             $_SESSION['error'] = "Có lỗi xảy ra, vui lòng thử lại.";
         }
@@ -90,7 +89,7 @@ $result = $conn->query($sql);
 if ($result->num_rows == 0) {
     die("Không tìm thấy thông tin người dùng.");
 }
-$user = $result->fetch_assoc();
+$users = $result->fetch_assoc();
 
 // Lấy danh sách địa chỉ
 $contacts = $conn->query("SELECT * FROM user_contacts WHERE user_id = $user_id ORDER BY is_default DESC, id DESC");
@@ -123,7 +122,7 @@ include "includes/navbar.php";
                         style="width:120px; height:120px;">
                         <i class="fa-solid fa-user" style="font-size:60px; color:#6c757d;"></i>
                     </div>
-                    <h5 class="mt-2"><?= htmlspecialchars($user['fullname']) ?></h5>
+                    <h5 class="mt-2"><?= htmlspecialchars($users['fullname']) ?></h5>
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="profile.php" class="list-group-item list-group-item-action active">
@@ -154,27 +153,27 @@ include "includes/navbar.php";
                             <label class="col-sm-3 col-form-label">Tên đăng nhập</label>
                             <div class="col-sm-9">
                                 <input type="text" name="username" class="form-control"
-                                    value="<?= htmlspecialchars($user['username']) ?>" required>
+                                    value="<?= htmlspecialchars($users['username']) ?>" required>
                             </div>
                         </div>
                         <div class="mb-3 row">
                             <label class="col-sm-3 col-form-label">Tên hiển thị</label>
                             <div class="col-sm-9">
                                 <input type="text" name="fullname" class="form-control"
-                                    value="<?= htmlspecialchars($user['fullname']) ?>" required>
+                                    value="<?= htmlspecialchars($users['fullname']) ?>" required>
                             </div>
                         </div>
                         <div class="mb-3 row">
                             <label class="col-sm-3 col-form-label">Email</label>
                             <div class="col-sm-9">
                                 <input type="email" name="email" class="form-control"
-                                    value="<?= htmlspecialchars($user['email']) ?>" required>
+                                    value="<?= htmlspecialchars($users['email']) ?>" required>
                             </div>
                         </div>
                         <div class="mb-3 row">
                             <label class="col-sm-3 col-form-label">Ngày tham gia</label>
                             <div class="col-sm-9 pt-2">
-                                <span class="text-muted"><?= date("d/m/Y", strtotime($user['created_at'])) ?></span>
+                                <span class="text-muted"><?= date("d/m/Y", strtotime($users['created_at'])) ?></span>
                             </div>
                         </div>
                         <div class="text-end">
@@ -186,7 +185,7 @@ include "includes/navbar.php";
                     <hr>
 
                     <!-- form địa chỉ -->
-                    <h5>Địa chỉ giao hàng</h5>
+                    <h5>Địa chỉ giao hàng (Trước sáp nhập)</h5>
                     <?php if ($contacts->num_rows > 0): ?>
                         <ul class="list-group mb-3">
                             <?php while ($c = $contacts->fetch_assoc()): ?>
@@ -199,8 +198,12 @@ include "includes/navbar.php";
                                         <?php endif; ?>
                                     </div>
                                     <div>
-                                        <a href="profile.php?action=set_default&id=<?= $c['id'] ?>"
-                                            class="btn btn-sm btn-outline-primary">Chọn mặc định</a>
+                                        <?php if (!$c['is_default']): ?>
+                                            <a href="profile.php?action=set_default&id=<?= $c['id'] ?>"
+                                                class="btn btn-sm btn-outline-primary">
+                                                Chọn mặc định
+                                            </a>
+                                        <?php endif; ?>
                                         <a href="profile.php?action=delete&id=<?= $c['id'] ?>"
                                             class="btn btn-sm btn-outline-danger"
                                             onclick="return confirm('Xóa địa chỉ này?')">Xóa</a>
@@ -256,7 +259,7 @@ include "includes/navbar.php";
 
 <script>
     async function loadProvinces() {
-        let res = await fetch("https://provinces.open-api.vn/api/v2/?depth=1");
+        let res = await fetch("https://provinces.open-api.vn/api/v1/?depth=1");
         let data = await res.json();
         let provinceSelect = document.getElementById("province");
         data.forEach(p => {

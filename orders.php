@@ -13,7 +13,7 @@ $user_id = intval($_SESSION['user_id']);
 // Lấy thông tin user
 $sql_user = "SELECT fullname FROM users WHERE id = $user_id LIMIT 1";
 $result_user = $conn->query($sql_user);
-$user = $result_user->fetch_assoc();
+$users = $result_user->fetch_assoc();
 
 // Lấy tất cả đơn hàng của user
 $sql = "SELECT * FROM orders WHERE user_id = $user_id ORDER BY created_at DESC";
@@ -51,7 +51,7 @@ include "includes/navbar.php";
                         style="width:120px; height:120px;">
                         <i class="fa-solid fa-user" style="font-size:60px; color:#6c757d;"></i>
                     </div>
-                    <h5 class="mt-2"><?= htmlspecialchars($user['fullname']) ?></h5>
+                    <h5 class="mt-2"><?= htmlspecialchars($users['fullname']) ?></h5>
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="profile.php" class="list-group-item list-group-item-action">
