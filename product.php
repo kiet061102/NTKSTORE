@@ -201,6 +201,7 @@ $avg_rating = $rating_data['avg_rating'] ? round($rating_data['avg_rating'], 1) 
     ?>
 </div>
 <?php include 'includes/footer.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.getElementById("qty")?.addEventListener("input", function () {
         document.getElementById("buyNowQty").value = this.value;

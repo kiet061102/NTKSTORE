@@ -16,14 +16,14 @@ if (session_status() === PHP_SESSION_NONE) {
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Trang chủ</a></li>
-                <li class="nav-item"><?php include "categories.php"; ?></li>
+                <li class="nav-item"><a class="nav-link" href="categories.php">Danh mục</a></li>
                 <li class="nav-item"><a class="nav-link" href="about.php">Giới thiệu</a></li>
             </ul>
 
-            <form class="d-flex me-3" action="search.php" method="GET">
+            <form class="d-flex me-3 my-0" action="search.php" method="GET">
                 <input class="form-control me-2" type="search" name="keyword" placeholder="Tìm sản phẩm..."
                     aria-label="Search">
-                <button class="btn btn-outline-light" type="submit">
+                <button class="btn btn-outline-light fs-4" type="submit">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
             </form>
