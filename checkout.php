@@ -203,29 +203,33 @@ $contacts = $conn->query($sql_contacts);
             <div class="mb-3">
                 <label class="form-label">Địa chỉ nhận hàng:</label>
                 <?php if ($contacts->num_rows > 0): ?>
-                    <select id="addressSelect" class="form-select" required>
+                    <select id="addressSelect" class="form-select w-75" required>
                         <?php while ($c = $contacts->fetch_assoc()): ?>
                             <option value="<?= htmlspecialchars($c['address']) ?>"
                                 data-phone="<?= htmlspecialchars($c['phone']) ?>"
-                                data-fullname="<?= htmlspecialchars($c['fullname']) ?>" <?= $c['is_default'] ? 'selected' : '' ?>><?= htmlspecialchars($c['fullname']) ?> |
-                                <?= htmlspecialchars($c['phone']) ?> -
+                                data-fullname="<?= htmlspecialchars($c['fullname']) ?>" <?= $c['is_default'] ? 'selected' : '' ?>><?= htmlspecialchars($c['fullname']) ?> | <?= htmlspecialchars($c['phone']) ?> -
                                 <?= htmlspecialchars($c['address']) ?>
                                 <?= $c['is_default'] ? '(Mặc định)' : '' ?>
                             </option>
                         <?php endwhile; ?>
                     </select>
 
+                    <!-- Hiển thị thông tin địa chỉ -->
+                    <div id="addressInfo" class="mt-3 p-3 border rounded bg-secondary bg-opacity-25 w-75">
+                        <p><strong>Họ tên:</strong> <span id="showFullname"></span></p>
+                        <p><strong>Số điện thoại:</strong> <span id="showPhone"></span></p>
+                        <p><strong>Địa chỉ:</strong> <span id="showAddress"></span></p>
+                    </div>
+
                     <!-- Hidden inputs để submit -->
                     <input type="hidden" name="fullname" id="fullnameInput">
                     <input type="hidden" name="phone" id="phoneInput">
                     <input type="hidden" name="address" id="addressInput">
+
                 <?php else: ?>
                     <div class="alert alert-warning">
                         Bạn chưa có địa chỉ nào. Vui lòng thêm trong <a href="profile.php">Hồ sơ</a>.
                     </div>
-                    <input type="text" name="fullname" class="form-control mb-2" placeholder="Họ và tên" required>
-                    <input type="text" name="phone" class="form-control mb-2" placeholder="Số điện thoại" required>
-                    <input type="text" name="address" class="form-control" placeholder="Nhập địa chỉ mới" required>
                 <?php endif; ?>
             </div>
             <div class="mb-3">
@@ -262,17 +266,32 @@ $contacts = $conn->query($sql_contacts);
     const phoneInput = document.getElementById("phoneInput");
     const addressInput = document.getElementById("addressInput");
 
+    // Thêm các phần hiển thị thông tin
+    const showFullname = document.getElementById("showFullname");
+    const showPhone = document.getElementById("showPhone");
+    const showAddress = document.getElementById("showAddress");
+
     function updateContact() {
         let selected = addressSelect?.selectedOptions[0];
         if (selected) {
-            fullnameInput.value = selected.dataset.fullname || "";
-            phoneInput.value = selected.dataset.phone || "";
-            addressInput.value = selected.value || "";
+            const fullname = selected.dataset.fullname || "";
+            const phone = selected.dataset.phone || "";
+            const address = selected.value || "";
+
+            // Cập nhật hidden input
+            fullnameInput.value = fullname;
+            phoneInput.value = phone;
+            addressInput.value = address;
+
+            // Cập nhật phần hiển thị ra giao diện
+            showFullname.textContent = fullname;
+            showPhone.textContent = phone;
+            showAddress.textContent = address;
         }
     }
 
     if (addressSelect) {
         addressSelect.addEventListener("change", updateContact);
-        updateContact(); // load mặc định
+        updateContact(); // hiển thị địa chỉ mặc định khi load trang
     }
 </script>

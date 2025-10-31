@@ -8,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
 $user_id = intval($_SESSION['user_id']);
 
 // Thêm vào giỏ hàng
@@ -148,10 +147,10 @@ if (!$result) {
                                         min="1" max="<?= $row['stock'] ?>" class="form-control text-center"
                                         style="max-width:70px;">
 
-                                        <button type="submit" name="update" value="<?= $row['id'] ?>"
-                                            class="btn btn-sm btn-primary ms-2">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
+                                    <button type="submit" name="update" value="<?= $row['id'] ?>"
+                                        class="btn btn-sm btn-primary ms-2">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
                                 </div>
                             </td>
                             <td><?= number_format($subtotal, 0, ',', '.') ?>₫</td>

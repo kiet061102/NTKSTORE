@@ -21,9 +21,14 @@ if (!$product) {
 // Xử lý ảnh
 $images = !empty($product['image']) ? explode(',', $product['image']) : [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Lấy thông tin đánh giá sản phẩm
+$sql_rating = "SELECT COUNT(*) AS total_reviews, AVG(rating) AS avg_rating FROM reviews WHERE product_id = $id";
+$result_rating = $conn->query($sql_rating);
+$rating_data = $result_rating->fetch_assoc();
 
-}
+$total_reviews = $rating_data['total_reviews'] ?? 0;
+$avg_rating = $rating_data['avg_rating'] ? round($rating_data['avg_rating'], 1) : 0;
+
 ?>
 
 <body class="bg-light">
@@ -66,6 +71,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <h4 class="text-danger fw-bold mb-3"><?= number_format($product['price'], 0, ',', '.') ?>₫</h4>
                     <p><span class="fw-semibold">Hãng:</span> <?= htmlspecialchars($product['brand_name']) ?></p>
                     <p><span class="fw-semibold">Loại:</span> <?= htmlspecialchars($product['category_name']) ?></p>
+                    <p>
+                        <span class="fw-semibold">Đánh giá:</span>
+                        <?php if ($total_reviews > 0): ?>
+                            <?php
+                            $fullStars = floor($avg_rating);
+                            $halfStar = ($avg_rating - $fullStars) >= 0.5 ? 1 : 0;
+                            $emptyStars = 5 - $fullStars - $halfStar;
+
+                            // Hiển thị sao đầy
+                            for ($i = 0; $i < $fullStars; $i++)
+                                echo '<i class="fa-solid fa-star text-warning"></i>';
+
+                            // Hiển thị nửa sao nếu có
+                            if ($halfStar)
+                                echo '<i class="fa-solid fa-star-half-stroke text-warning"></i>';
+
+                            // Hiển thị sao trống
+                            for ($i = 0; $i < $emptyStars; $i++)
+                                echo '<i class="fa-regular fa-star text-warning"></i>';
+                            ?>
+                            <?= $total_reviews ?>
+                            <span class="ms-2">(<?= number_format($avg_rating, 1) ?>/5)</span>
+
+                        <?php else: ?>
+                            <span class="text-muted">Chưa có đánh giá nào</span>
+                        <?php endif; ?>
+                    </p>
                     <p><span class="fw-semibold">Số lượng còn:</span> <?= (int) $product['stock'] ?></p>
                     <p>
                         <span class="fw-semibold">Trạng thái:</span>
@@ -120,10 +152,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     </div>
 </body>
+<!-- Hiển thị danh sách đánh giá -->
+<div class="container">
+    <h4 class="fw-bold mb-3">Đánh giá của người dùng</h4>
+    <?php
+    $sql_reviews = "
+        SELECT r.*, u.fullname 
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.product_id = $id
+        ORDER BY r.created_at DESC
+    ";
+    $result_reviews = $conn->query($sql_reviews);
+
+    if ($result_reviews && $result_reviews->num_rows > 0):
+        while ($row = $result_reviews->fetch_assoc()):
+            $rating = (float) $row['rating'];
+            $fullStars = floor($rating);
+            $halfStar = ($rating - $fullStars) >= 0.5 ? 1 : 0;
+            $emptyStars = 5 - $fullStars - $halfStar;
+            ?>
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="fw-bold mb-1"><i class="fa-solid fa-user"></i> <?= htmlspecialchars($row['fullname']) ?></h6>
+                        <small class="text-muted"><?= date("d/m/Y H:i", strtotime($row['created_at'])) ?></small>
+                    </div>
+                    <div class="mb-2">
+                        <?php
+                        // Hiển thị sao
+                        for ($i = 0; $i < $fullStars; $i++)
+                            echo '<i class="fa-solid fa-star text-warning"></i>';
+                        if ($halfStar)
+                            echo '<i class="fa-solid fa-star-half-stroke text-warning"></i>';
+                        for ($i = 0; $i < $emptyStars; $i++)
+                            echo '<i class="fa-regular fa-star text-warning"></i>';
+                        ?>
+                        <span class="ms-2">(<?= number_format($rating, 1) ?>)</span>
+                    </div>
+                    <p class="mb-0">Nội dung: <?= nl2br(htmlspecialchars($row['comment'])) ?></p>
+                </div>
+            </div>
+            <?php
+        endwhile;
+    else:
+        echo '<p class="text-muted">Chưa có đánh giá nào cho sản phẩm này.</p>';
+    endif;
+    ?>
+</div>
 <?php include 'includes/footer.php'; ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-    crossorigin="anonymous"></script>
 <script>
     document.getElementById("qty")?.addEventListener("input", function () {
         document.getElementById("buyNowQty").value = this.value;

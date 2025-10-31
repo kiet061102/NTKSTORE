@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="OwlCarousel/css/owl.carousel.min.css">
+<link rel="stylesheet" href="OwlCarousel/css/owl.theme.default.min.css">
+
+
+
+<script src="OwlCarousel/js/owl.carousel.min.js"></script>
+<script>
+	$('.owl-carousel').owlCarousel({
+	    loop:true,
+	    margin:10,
+	    nav:true,
+	    navText:["<i class='fas fa-arrow-circle-left trai'></i>",
+	    			"<i class='fas fa-arrow-circle-right phai'></i>"],
+	    items:6,
+	    autoplay:true,
+    	autoplayTimeout:1000,
+	})
+</script>

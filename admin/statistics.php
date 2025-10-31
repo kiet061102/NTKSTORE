@@ -2,14 +2,10 @@
 session_start();
 require "../config/db.php";
 
-// ========================
 // CẤU HÌNH NĂM THỐNG KÊ
-// ========================
 $year = isset($_GET['year']) ? intval($_GET['year']) : date("Y");
 
-// ========================
-// 1️⃣ LẤY SỐ LƯỢNG BÁN THEO THÁNG
-// ========================
+// LẤY SỐ LƯỢNG BÁN THEO THÁNG
 $sql_sold = "
     SELECT MONTH(o.created_at) AS month, SUM(od.quantity) AS total_sold
     FROM order_details od
@@ -24,9 +20,7 @@ while ($row = $result->fetch_assoc()) {
     $monthlySold[intval($row['month'])] = intval($row['total_sold']);
 }
 
-// ========================
-// 2️⃣ TỔNG DOANH THU CẢ NĂM
-// ========================
+// TỔNG DOANH THU CẢ NĂM
 $sql_total = "
     SELECT SUM(od.quantity * od.price) AS total
     FROM order_details od
@@ -35,9 +29,7 @@ $sql_total = "
 ";
 $total = $conn->query($sql_total)->fetch_assoc()['total'] ?? 0;
 
-// ========================
-// 3️⃣ LỢI NHUẬN THEO THÁNG & TỔNG NĂM
-// ========================
+// LỢI NHUẬN THEO THÁNG & TỔNG NĂM
 $sql_profit = "
     SELECT 
         MONTH(o.created_at) AS month,
@@ -63,9 +55,7 @@ while ($row = $res_profit->fetch_assoc()) {
     $totalProfit += floatval($row['profit']);
 }
 
-// ========================
-// 4️⃣ CHI TIẾT SẢN PHẨM THEO THÁNG
-// ========================
+// CHI TIẾT SẢN PHẨM THEO THÁNG
 $detailsByMonth = [];
 foreach (range(1, 12) as $m) {
     if ($monthlySold[$m] == 0)
@@ -101,7 +91,6 @@ foreach (range(1, 12) as $m) {
 <head>
     <meta charset="UTF-8">
     <title>Thống kê bán hàng - Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -119,7 +108,7 @@ foreach (range(1, 12) as $m) {
                             <option value="<?= $y ?>" <?= $y == $year ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
                     </select>
-                    <button type="submit" class="btn btn-primary">Xem</button>
+                    <button class="btn btn-sm btn-primary">Xem</button>
                 </form>
             </div>
 
@@ -150,7 +139,7 @@ foreach (range(1, 12) as $m) {
                                             <th>Chi tiết</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="accordionMonths">
                                         <?php foreach (range(1, 12) as $m): ?>
                                             <tr>
                                                 <td><strong><?= $m ?>/<?= $year ?></strong></td>
@@ -160,42 +149,49 @@ foreach (range(1, 12) as $m) {
                                                 </td>
                                                 <td>
                                                     <?php if (!empty($detailsByMonth[$m])): ?>
-                                                        <button class="btn btn-sm btn-info fw-bold toggle-btn"
-                                                            data-target="#month<?= $m ?>">Xem</button>
+                                                        <button class="btn btn-sm btn-info fw-bold"
+                                                            data-target="#month<?= $m ?>">
+                                                            Xem
+                                                        </button>
                                                     <?php else: ?> -
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
 
                                             <?php if (!empty($detailsByMonth[$m])): ?>
-                                                <tr class="collapse" id="month<?= $m ?>">
-                                                    <td colspan="4">
-                                                        <div class="card card-body">
-                                                            <table class="table table-sm table-bordered text-center">
-                                                                <thead class="table-primary">
-                                                                    <tr>
-                                                                        <th>Sản phẩm</th>
-                                                                        <th>Loại</th>
-                                                                        <th>Hãng</th>
-                                                                        <th>Số lượng bán</th>
-                                                                        <th>Lợi nhuận</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    <?php foreach ($detailsByMonth[$m] as $row): ?>
+                                                <tr>
+                                                    <td colspan="4" class="p-0">
+                                                        <div id="month<?= $m ?>" class="accordion-collapse collapse">
+                                                            <div class="card card-body">
+                                                                <table class="table table-sm table-bordered text-center mb-0">
+                                                                    <thead class="table-primary">
                                                                         <tr>
-                                                                            <td><?= htmlspecialchars($row['product_name']) ?></td>
-                                                                            <td><?= htmlspecialchars($row['category_name']) ?></td>
-                                                                            <td><?= htmlspecialchars($row['brand_name']) ?></td>
-                                                                            <td><?= $row['total_sold'] ?></td>
-                                                                            <td
-                                                                                class="<?= $row['profit'] >= 0 ? 'text-success' : 'text-danger' ?>">
-                                                                                <?= number_format($row['profit'], 0, ',', '.') ?> ₫
-                                                                            </td>
+                                                                            <th>Sản phẩm</th>
+                                                                            <th>Loại</th>
+                                                                            <th>Hãng</th>
+                                                                            <th>Số lượng bán</th>
+                                                                            <th>Lợi nhuận</th>
                                                                         </tr>
-                                                                    <?php endforeach; ?>
-                                                                </tbody>
-                                                            </table>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <?php foreach ($detailsByMonth[$m] as $row): ?>
+                                                                            <tr>
+                                                                                <td><?= htmlspecialchars($row['product_name']) ?>
+                                                                                </td>
+                                                                                <td><?= htmlspecialchars($row['category_name']) ?>
+                                                                                </td>
+                                                                                <td><?= htmlspecialchars($row['brand_name']) ?></td>
+                                                                                <td><?= $row['total_sold'] ?></td>
+                                                                                <td
+                                                                                    class="<?= $row['profit'] >= 0 ? 'text-success' : 'text-danger' ?>">
+                                                                                    <?= number_format($row['profit'], 0, ',', '.') ?>
+                                                                                    ₫
+                                                                                </td>
+                                                                            </tr>
+                                                                        <?php endforeach; ?>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -227,27 +223,45 @@ foreach (range(1, 12) as $m) {
         new Chart(salesCtx, {
             type: 'pie',
             data: {
-                labels: Array.from({ length: 12 }, (_, i) => `Th${i + 1}`),
+                labels: Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`),
                 datasets: [{
                     label: 'Sản phẩm bán ra',
                     data: <?= json_encode(array_values($monthlySold)) ?>,
-                    backgroundColor: Array.from({ length: 12 }, () =>
-                        `hsl(${Math.random() * 360}, 70%, 70%)`)
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                        '#9966FF', '#FF9F40', '#66BB6A', '#BA68C8',
+                        '#26C6DA', '#EF5350', '#D4E157', '#8D6E63'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 15,
+                            color: '#333',
+                            font: { size: 13 }
+                        }
+                    }
+                }
+            }
         });
 
-        const profitCtx = document.getElementById('profitChart').getContext('2d');
-        new Chart(profitCtx, {
-            type: 'bar',
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
             data: {
-                labels: Array.from({ length: 12 }, (_, i) => `Th${i + 1}`),
+                labels: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
                 datasets: [{
                     label: 'Lợi nhuận (₫)',
                     data: <?= json_encode(array_values($monthlyProfit)) ?>,
-                    backgroundColor: 'rgba(40,167,69,0.6)',
-                    borderColor: 'rgba(40,167,69,1)'
+                    borderColor: 'rgb(40,167,69)',
+                    tension: 0.4,
+                    fill: false
                 }]
             },
             options: {
@@ -259,17 +273,25 @@ foreach (range(1, 12) as $m) {
                 }
             }
         });
-    </script>
 
+    </script>
     <!-- Toggle xem/ẩn -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            document.querySelectorAll(".toggle-btn").forEach(btn => {
-                btn.addEventListener("click", () => {
-                    const target = document.querySelector(btn.dataset.target);
-                    const collapse = bootstrap.Collapse.getOrCreateInstance(target);
-                    target.classList.contains("show") ? collapse.hide() : collapse.show();
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('.btn[data-target]').forEach(button => {
+                button.addEventListener('click', function () {
+                    const target = document.querySelector(this.dataset.target);
+                    const collapseInstance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+
+                    if (target.classList.contains('show')) {
+                        collapseInstance.hide(); // Nếu đang mở thì đóng lại
+                    } else {
+                        document.querySelectorAll('.accordion-collapse.show').forEach(openItem => {
+                            bootstrap.Collapse.getOrCreateInstance(openItem, { toggle: false }).hide();
+                        });
+                        collapseInstance.show(); // Mở mục hiện tại
+                    }
                 });
             });
         });
