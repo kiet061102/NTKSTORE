@@ -37,8 +37,8 @@ if ($action === 'set_default' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     $check = $conn->query("SELECT id FROM user_contacts WHERE id = $id AND user_id = $user_id");
     if ($check->num_rows > 0) {
-        $conn->query("UPDATE user_contacts SET default = 0 WHERE user_id = $user_id");
-        $conn->query("UPDATE user_contacts SET default = 1 WHERE id = $id");
+        $conn->query("UPDATE user_contacts SET is_default = 0 WHERE user_id = $user_id");
+        $conn->query("UPDATE user_contacts SET is_default = 1 WHERE id = $id");
         $_SESSION['success'] = "Đã chọn địa chỉ mặc định.";
     } else {
         $_SESSION['error'] = "Không tìm thấy địa chỉ.";

@@ -2,9 +2,21 @@
 <link rel="stylesheet" href="public/owlcarousel/css/owl.theme.default.min.css">
 
 <?php
+session_start();
 include 'includes/header.php';
 include 'includes/navbar.php';
 include 'config/db.php';
+
+$user_id = $_SESSION['user_id'] ?? null;
+
+if ($user_id) {
+  $sql = "SELECT u.id, u.fullname, u.email, c.phone 
+          FROM users u
+          LEFT JOIN user_contacts c ON u.id = c.user_id
+          WHERE u.id = '$user_id' LIMIT 1";
+  $result = $conn->query($sql);
+  $user = $result->fetch_assoc();
+}
 
 // Lấy 8 sản phẩm mới nhất
 $newProducts = $conn->query("SELECT p.*, (SELECT COUNT(*) FROM reviews WHERE product_id = p.id) AS total_reviews, (SELECT ROUND(AVG(rating), 1) FROM reviews WHERE product_id = p.id) AS avg_rating FROM products p ORDER BY p.id DESC LIMIT 8");
@@ -21,9 +33,6 @@ $totalPages = ceil($totalProducts / $limit);
 
 // Lấy tất cả sản phẩm + thông tin đánh giá
 $allProducts = $conn->query("SELECT p.*, (SELECT COUNT(*) FROM reviews WHERE product_id = p.id) AS total_reviews, (SELECT ROUND(AVG(rating), 1) FROM reviews WHERE product_id = p.id) AS avg_rating FROM products p ORDER BY p.id DESC LIMIT $limit OFFSET $offset");
-
-$total_reviews = $row['total_reviews'] ?? 0;
-$avg_rating = $row['avg_rating'] ?? 0;
 ?>
 
 <body class="bg-light">
@@ -37,6 +46,8 @@ $avg_rating = $row['avg_rating'] ?? 0;
             <?php
             $images = !empty($row['image']) ? explode(',', $row['image']) : [];
             $mainImage = $images[2] ?? 'no-image.jpg';
+            $total_reviews = $row['total_reviews'] ?? 0;
+            $avg_rating = $row['avg_rating'] ?? 0;
             ?>
             <div class="item">
               <a href="product.php?id=<?= $row['id'] ?>" class="text-decoration-none text-dark">
@@ -93,6 +104,8 @@ $avg_rating = $row['avg_rating'] ?? 0;
         while ($row = $allProducts->fetch_assoc()):
           $images = !empty($row['image']) ? explode(',', $row['image']) : [];
           $mainImage = $images[2] ?? null;
+          $total_reviews = $row['total_reviews'] ?? 0;
+          $avg_rating = $row['avg_rating'] ?? 0;
           ?>
           <div class="col-md-3 mb-4">
             <a href="product.php?id=<?= $row['id'] ?>" class="text-decoration-none">
@@ -160,6 +173,43 @@ $avg_rating = $row['avg_rating'] ?? 0;
       </ul>
     </nav>
   </div>
+
+  <!--Start of Tawk.to Script-->
+  <script type="text/javascript">
+    var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
+    (function () {
+      var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
+      s1.async = true;
+      s1.src = 'https://embed.tawk.to/69088479b1d7ee1956c25628/1j94kavd5';
+      s1.charset = 'UTF-8';
+      s1.setAttribute('crossorigin', '*');
+      s0.parentNode.insertBefore(s1, s0);
+    })();
+  </script>
+  <!--End of Tawk.to Script-->
+  <script type="text/javascript">
+    var Tawk_API = Tawk_API || {};
+
+    Tawk_API.onLoad = function () {
+      <?php if (!empty($user)) { ?>
+        console.log("User logged in -> Auto-start chat with user info");
+
+        Tawk_API.setAttributes({
+          'name': '<?php echo $user["id"] . "_" . addslashes($user["fullname"]); ?>',
+          'email': '<?php echo addslashes($user["email"]); ?>',
+          'phone': '<?php echo addslashes($user["phone"] ?: ""); ?>'
+        }, function (error) {
+          if (!error) {
+            Tawk_API.startConversation();
+          }
+        });
+
+      <?php } else { ?>
+        console.log("Guest -> Start chat as Anonymous");
+        Tawk_API.startConversation();
+      <?php } ?>
+    };
+  </script>
 </body>
 
 <?php include 'includes/footer.php'; ?>
@@ -174,7 +224,7 @@ $avg_rating = $row['avg_rating'] ?? 0;
       margin: 10,
       nav: false,
       autoplay: true,
-      autoplayTimeout: 1000,
+      autoplayTimeout: 1500,
       responsive: {
         0: { items: 1 },
         600: { items: 2 },

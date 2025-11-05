@@ -113,7 +113,6 @@ if (isset($_GET['edit'])) {
                 <a href="products.php" class="btn btn-success"><i class="fa-solid fa-plus"></i> Thêm sản phẩm</a>
             </div>
             <div class="card-body">
-
                 <!-- FORM THÊM / SỬA -->
                 <form method="POST" enctype="multipart/form-data" class="mb-4">
                     <input type="hidden" name="id" value="<?= $editData['id'] ?? '' ?>">
